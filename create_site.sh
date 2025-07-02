@@ -2,42 +2,43 @@
 
 NGINX_AVAILABLE="/etc/nginx/sites-available"
 NGINX_ENABLED="/etc/nginx/sites-enabled"
+DEFAULT_ROOT="/var/lib/jenkins/workspace"
 
+# 1. Ask for domain name
 while true; do
-    echo "🔧 Enter your domain name (e.g., example.com):"
+    echo "Enter your domain name (required, e.g., example.com):"
     read DOMAIN
 
+    # Check if empty
+    if [ -z "$DOMAIN" ]; then
+        echo "Domain name is required. Please try again."
+        continue
+    fi
+
+    # Check if config already exists
     CONFIG_BARE="$NGINX_AVAILABLE/$DOMAIN"
     CONFIG_CONF="$NGINX_AVAILABLE/$DOMAIN.conf"
 
     if [ -f "$CONFIG_BARE" ] || [ -f "$CONFIG_CONF" ]; then
-        echo "⚠️ A config already exists for '$DOMAIN' as either '$CONFIG_BARE' or '$CONFIG_CONF'"
-        echo "❗ Please enter a different domain name."
+        echo "A config for '$DOMAIN' already exists as '$CONFIG_BARE' or '$CONFIG_CONF'"
+        echo "Please enter a different domain name."
     else
         break
     fi
 done
 
-
-# while true; do
-#     echo "🔧 Enter your domain name (e.g., example.com):"
-#     read DOMAIN
-#     CONFIG_PATH="$NGINX_AVAILABLE/$DOMAIN"
-
-#     if [ -f "$CONFIG_PATH" ]; then
-#         echo "⚠️ A config for '$DOMAIN' already exists at $CONFIG_PATH"
-#         echo "❗ Please enter a different domain name."
-#     else
-#         break
-#     fi
-# done
-
-# 2. Root directory
-echo "📁 Enter your root directory (e.g., /var/www/$DOMAIN/html):"
+# 2. Ask for root directory with default fallback
+echo "Enter your root directory (press Enter for default: $DEFAULT_ROOT):"
 read ROOT_DIR
 
+if [ -z "$ROOT_DIR" ]; then
+    ROOT_DIR="$DEFAULT_ROOT"
+    echo "Using default root: $ROOT_DIR"
+fi
+
+
 # 3. Email for SSL
-#echo "📧 Enter your email for SSL certificate (used by Certbot):"
+#echo "Enter your email for SSL certificate (used by Certbot):"
 #read EMAIL
 
 # 4. Create Nginx config
@@ -64,22 +65,22 @@ server {
 }
 EOL
 
-echo "✅ Nginx config created at $CONFIG_BARE"
+echo "Nginx config created at $CONFIG_BARE"
 
 # 5. Symlink to sites-enabled
 sudo ln -s "$CONFIG_BARE" "$NGINX_ENABLED/"
-echo "🔗 Symlinked to $NGINX_ENABLED"
+echo "Symlinked to $NGINX_ENABLED"
 
 # 6. Test Nginx config
 sudo nginx -t
 if [ $? -ne 0 ]; then
-    echo "❌ Nginx configuration test failed. Aborting."
+    echo "Nginx configuration test failed. Aborting."
     exit 1
 fi
 
 # 7. Reload Nginx
 sudo systemctl reload nginx
-echo "🔄 Nginx reloaded"
+echo "Nginx reloaded"
 
 # 8. Run Certbot for SSL
 #certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$EMAIL"
